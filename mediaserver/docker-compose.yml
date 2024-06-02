@@ -1,0 +1,170 @@
+Version: '1'
+
+services:
+#Deluge Torrent downloader
+  deluge:
+    image: lscr.io/linuxserver/deluge:latest
+    container_name: deluge
+    network_mode: "container:gluetun"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - DELUGE_LOGLEVEL=error #optional
+    volumes:
+      - /portainer/deluge/config:/config
+      - /mnt/media/downloads:/downloads
+    restart: unless-stopped
+
+#Prolwarr torrent indexer  
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Chicago
+    volumes:
+      - /portainer/prowlarr/config:/config
+    networks:
+     - traefik-proxy
+    ports:
+      # - 9696:9696
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.adguardhome.entrypoints=insecure"
+      - "traefik.http.routers.adguardhome.rule=Host(`prowlarr.$DOMAIN`)"
+      - "traefik.http.services.adguardhome.loadbalancer.server.port=3000"
+      # - "traefik.http.routers.adguardhome.tls.certresolver=le"
+
+#Radarr movie library manager  
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Chicago
+    volumes:
+      - /portainer/radarr/config:/config
+      - /mnt/media/movies:/movies #optional
+      - /mnt/media/downloads:/downloads #optional
+    networks:
+     - traefik-proxy
+    ports:
+      # - 7878:7878
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.adguardhome.entrypoints=insecure"
+      - "traefik.http.routers.adguardhome.rule=Host(`radarr.$DOMAIN`)"
+      - "traefik.http.services.adguardhome.loadbalancer.server.port=3000"
+      # - "traefik.http.routers.adguardhome.tls.certresolver=le"
+
+#Sonarr tv show library manager
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Chicago
+    volumes:
+      - /portainer/sonarr/config:/config
+      - /mnt/media/tv:/tv #optional
+      - /mnt/media/downloads:/downloads #optional
+    networks:
+     - traefik-proxy
+    ports:
+      # - 8989:8989
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.adguardhome.entrypoints=insecure"
+      - "traefik.http.routers.adguardhome.rule=Host(`sonarr.$DOMAIN`)"
+      - "traefik.http.services.adguardhome.loadbalancer.server.port=3000"
+      # - "traefik.http.routers.adguardhome.tls.certresolver=le"
+
+#Jellyfin hosted media player and user interface
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Chicago
+    volumes:
+      - /portainer/jellyfin/config:/config
+      - /mnt/media/tv:/data/tvshows
+      - /mnt/media/movies:/data/movies
+    networks:
+     - traefik-proxy
+    ports:
+      # - 8096:8096
+      # - 8920:8920 #optional
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.adguardhome.entrypoints=insecure"
+      - "traefik.http.routers.adguardhome.rule=Host(`jellfin.$DOMAIN`)"
+      - "traefik.http.services.adguardhome.loadbalancer.server.port=3000"
+      # - "traefik.http.routers.adguardhome.tls.certresolver=le"
+
+#Jellyseer avaliable media request and display 
+  jellyseer:
+    image: fallenbagel/jellyseerr:latest
+    container_name: jellyseer
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Chicago
+    volumes:
+      - /portainer/jellyseer/config:/config
+    networks:
+     - traefik-proxy
+    ports:
+      # - 5055:5055
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.adguardhome.entrypoints=insecure"
+      - "traefik.http.routers.adguardhome.rule=Host(`jellyseer.$DOMAIN`)"
+      - "traefik.http.services.adguardhome.loadbalancer.server.port=3000"
+      # - "traefik.http.routers.adguardhome.tls.certresolver=le"
+
+#Flaresolver proxy for prowlarr 
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      - LOG_LEVEL=LOG_LEVEL:-info
+      - LOG_HTML=LOG_HTML:-false
+      - CAPTCHA_SOLVER=CAPTCHA_SOLVER:-none
+      - TZ=America/Chicago
+    networks:
+     - traefik-proxy
+    ports:
+      # - 8191:8191
+    restart: unless-stopped
+
+#Unpackerr file manager to clean up ugly files
+  unpackerr:
+    image: golift/unpackerr
+    container_name: unpackerr
+    volumes:
+      - /mnt/media/downloads:/downloads
+    restart: always
+    user: 1000:1000
+    env_file: /unpackerr/.env
+    environment:
+      - TZ=America/Chicago
+      # Sonarr Config
+
+networks:
+#Traefik Network
+  traefik-proxy:
+    external: true
+
+
+             
